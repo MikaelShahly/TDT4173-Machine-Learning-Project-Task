@@ -1,9 +1,12 @@
 import pandas as pd
 import numpy as np
-from sklearn.tree import DecisionTreeRegressor
+from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
 from sklearn.model_selection import cross_val_score
 import subprocess
 import argparse
+from sklearn.metrics import mean_squared_error
+import autosklearn.classification
+
 
 def execute_cmd(command):
     """
@@ -49,22 +52,45 @@ def one_hot_to_categorical(df, col1, col2):
 def load_datasets():
     X_test  = pd.read_parquet('data/prepared_datasets/no_Nan_hotone_encoding/X_test.parquet')
     X_train = pd.read_parquet('data/prepared_datasets/no_Nan_hotone_encoding/X_train.parquet')
-    Y_train = pd.read_parquet('data/prepared_datasets/no_Nan_hotone_encoding/Y_train.parquet')
-    return X_train, Y_train, X_test
+    y_train = pd.read_parquet('data/prepared_datasets/no_Nan_hotone_encoding/y_train.parquet')
+    return X_train, y_train, X_test
 
-def train_and_predict(X_train, Y_train, X_test):
-    model = DecisionTreeRegressor(random_state=1)
-    scores = cross_val_score(model, X_train, Y_train, cv=5)
+def train_and_predict(X_train, y_train, X_test, model_type="regressor"):
+    """
+    Train and predict using either DecisionTreeRegressor or DecisionTreeClassifier.
+
+    Parameters:
+    - X_train: Training features
+    - y_train: Training labels/targets
+    - X_test: Test features
+    - model_type (str): Either "regressor" for regression or "classifier" for classification
+
+    Returns:
+    - DataFrame: Predictions
+    """
+    if model_type == "regressor":
+        model = DecisionTreeRegressor(random_state=1)
+    elif model_type == "automl":
+        model = autosklearn.classification.AutoSklearnClassifier(
+            time_left_for_this_task=120,
+            per_run_time_limit=30,
+            tmp_folder="/tmp/autosklearn_classification_example_tmp",
+        )
+    else:
+        raise ValueError(f"Invalid model_type: {model_type}. Expected 'regressor' or 'classifier'.")
+
+    scores = cross_val_score(model, X_train, y_train, cv=5)
     print("Cross-validation scores:", scores)
     print("Average cross-validation score:", scores.mean())
-    model.fit(X_train, Y_train)
+    
+    model.fit(X_train, y_train)
     predictions = model.predict(X_test)
-    return predictions
+    
+    return pd.DataFrame(predictions)
 
 def prepare_submission(predictions, X_test):
-    pd_predictions = pd.DataFrame(predictions)
     index_df = X_test.index.to_frame()
-    out_pd = pd.concat([index_df.reset_index(drop=True), pd_predictions.reset_index(drop=True)], axis=1)
+    out_pd = pd.concat([index_df.reset_index(drop=True), predictions.reset_index(drop=True)], axis=1)
     out_pd = out_pd.rename(columns={0: 'prediction', 'date_forecast': 'time'})
     out_pd['location'] = one_hot_to_categorical(X_test, 'B', 'C')
     out_pd.set_index('time', inplace=True)
@@ -82,12 +108,32 @@ def merge_with_sample(out_pd):
     merged_df.rename(columns={'prediction_new': 'prediction'}, inplace=True)
     return sample_submission[['id']].merge(merged_df[['id', 'prediction']], on='id', how='left')
 
+def validate(predicted_df, target_df):
+    train_targets = pd.read_parquet('data/A/train_targets.parquet')
+    
+    # Check if the number of samples in df and train_targets are the same
+    if len(predicted_df) != len(target_df):
+        raise ValueError(f"Validate: Inconsistent number of samples: predicted_df has {len(predicted_df)} samples while target_df has {len(target_df)} samples.")
+    
+    target_df.time = pd.to_datetime(target_df.time)
+    target_df.set_index('time', inplace=True)
+
+    # Set the 'time' column of df to match the index of target_df
+    predicted_df.time = pd.to_datetime(target_df.index)
+
+    # Compute RMSE
+    rmse = mean_squared_error(target_df, predicted_df, squared=False)
+    return rmse
+
 def main():
     pd.set_option('display.max_rows', 200)
     pd.set_option('display.max_columns', 200)
     
-    X_train, Y_train, X_test = load_datasets()
-    predictions = train_and_predict(X_train, Y_train, X_test)
+    X_train, y_train, X_test = load_datasets()
+    predictions = train_and_predict(X_train, y_train, X_test,model_type="classifier")
+    X_target = pd.read_parquet('data/A/train_targets.parquet')
+    # rmse = validate(predicted_df=predictions, target_df=X_target)
+    # print(f'RMSE: {rmse}')
     out_pd = prepare_submission(predictions, X_test)
     sample_submission = merge_with_sample(out_pd)
     sample_submission.to_csv('submission.csv', index=False)
