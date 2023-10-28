@@ -5,7 +5,7 @@ from sklearn.model_selection import cross_val_score
 import subprocess
 import argparse
 from sklearn.metrics import mean_squared_error
-import autosklearn.classification
+import autosklearn.regression
 
 
 def execute_cmd(command):
@@ -52,18 +52,18 @@ def one_hot_to_categorical(df, col1, col2):
 def load_datasets():
     X_test  = pd.read_parquet('data/prepared_datasets/no_Nan_hotone_encoding/X_test.parquet')
     X_train = pd.read_parquet('data/prepared_datasets/no_Nan_hotone_encoding/X_train.parquet')
-    y_train = pd.read_parquet('data/prepared_datasets/no_Nan_hotone_encoding/y_train.parquet')
+    y_train = pd.read_parquet('data/prepared_datasets/no_Nan_hotone_encoding/Y_train.parquet')
     return X_train, y_train, X_test
 
 def train_and_predict(X_train, y_train, X_test, model_type="regressor"):
     """
-    Train and predict using either DecisionTreeRegressor or DecisionTreeClassifier.
+    Train and predict.
 
     Parameters:
     - X_train: Training features
     - y_train: Training labels/targets
     - X_test: Test features
-    - model_type (str): Either "regressor" for regression or "classifier" for classification
+    - model_type (str): Either "regressor" for Decision Tree or "automl" for auto-sklearn.
 
     Returns:
     - DataFrame: Predictions
@@ -71,9 +71,10 @@ def train_and_predict(X_train, y_train, X_test, model_type="regressor"):
     if model_type == "regressor":
         model = DecisionTreeRegressor(random_state=1)
     elif model_type == "automl":
-        model = autosklearn.classification.AutoSklearnClassifier(
-            time_left_for_this_task=120,
-            per_run_time_limit=30,
+        model = autosklearn.regression.AutoSklearnRegressor(
+            time_left_for_this_task=600,
+            per_run_time_limit=60,
+            n_jobs=-1,
             tmp_folder="/tmp/autosklearn_classification_example_tmp",
         )
     else:
@@ -85,7 +86,10 @@ def train_and_predict(X_train, y_train, X_test, model_type="regressor"):
     
     model.fit(X_train, y_train)
     predictions = model.predict(X_test)
-    
+    try:
+        print(model.show_models())
+    except:
+        print("")
     return pd.DataFrame(predictions)
 
 def prepare_submission(predictions, X_test):
@@ -130,7 +134,7 @@ def main():
     pd.set_option('display.max_columns', 200)
     
     X_train, y_train, X_test = load_datasets()
-    predictions = train_and_predict(X_train, y_train, X_test,model_type="classifier")
+    predictions = train_and_predict(X_train, y_train, X_test,model_type="automl")
     X_target = pd.read_parquet('data/A/train_targets.parquet')
     # rmse = validate(predicted_df=predictions, target_df=X_target)
     # print(f'RMSE: {rmse}')
