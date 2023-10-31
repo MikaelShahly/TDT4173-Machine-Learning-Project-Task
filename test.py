@@ -51,9 +51,9 @@ def one_hot_to_categorical(df, col1, col2):
     return result_df
 
 def load_datasets():
-    X_test  = pd.read_parquet('data/prepared_datasets/no_Nan_hotone_encoding/X_test.parquet')
-    X_train = pd.read_parquet('data/prepared_datasets/no_Nan_hotone_encoding/X_train.parquet')
-    y_train = pd.read_parquet('data/prepared_datasets/no_Nan_hotone_encoding/Y_train.parquet')
+    X_test  = pd.read_parquet('data/prepared_datasets/non_cleaned/X_test.parquet')
+    X_train = pd.read_parquet('data/prepared_datasets/non_cleaned/X_train.parquet')
+    y_train = pd.read_parquet('data/prepared_datasets/non_cleaned/Y_train.parquet')
     return X_train, y_train, X_test
 
 def train_and_predict(X_train, y_train, X_test, model_type="regressor"):
@@ -79,7 +79,11 @@ def train_and_predict(X_train, y_train, X_test, model_type="regressor"):
             tmp_folder="/tmp/autosklearn_classification_example_tmp"
         )
     elif model_type == "catboost":
-        model = CatBoostRegressor()
+        cat_features = ['location']
+        model = CatBoostRegressor(
+            cat_features=cat_features,
+            verbose=100
+        )
     elif model_type == 'xgboost':
         model = XGBRegressor()
     else:
@@ -94,7 +98,6 @@ def train_and_predict(X_train, y_train, X_test, model_type="regressor"):
     try:
         print(model.show_models())
         print(model.leaderboard())
-        # print("MSE:", mean_squared_error(y_test, predictions))
         print(model.get_configuration_space(X_train, y_train))
     except:
         print("")
