@@ -51,9 +51,9 @@ def one_hot_to_categorical(df, col1, col2):
     return result_df
 
 def load_datasets():
-    X_test  = pd.read_parquet('data/prepared_datasets/non_cleaned/X_test.parquet')
-    X_train = pd.read_parquet('data/prepared_datasets/non_cleaned/X_train.parquet')
-    y_train = pd.read_parquet('data/prepared_datasets/non_cleaned/Y_train.parquet')
+    X_test  = pd.read_parquet('data/prepared_datasets/only_y_cleaned/X_test.parquet')
+    X_train = pd.read_parquet('data/prepared_datasets/only_y_cleaned/X_train.parquet')
+    y_train = pd.read_parquet('data/prepared_datasets/only_y_cleaned/Y_train.parquet')
     return X_train, y_train, X_test
 
 def train_and_predict(X_train, y_train, X_test, model_type="regressor"):
@@ -145,7 +145,7 @@ def main():
     pd.set_option('display.max_columns', 200)
     
     X_train, y_train, X_test = load_datasets()
-    predictions = train_and_predict(X_train, y_train, X_test,model_type="xgboost")
+    predictions = train_and_predict(X_train, y_train, X_test,model_type="catboost")
     X_target = pd.read_parquet('data/A/train_targets.parquet')
     # rmse = validate(predicted_df=predictions, target_df=X_target)
     # print(f'RMSE: {rmse}')
