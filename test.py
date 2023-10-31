@@ -6,7 +6,8 @@ import subprocess
 import argparse
 from sklearn.metrics import mean_squared_error
 import autosklearn.regression
-
+from catboost import Pool, CatBoostRegressor
+from xgboost import XGBRegressor
 
 def execute_cmd(command):
     """
@@ -75,8 +76,12 @@ def train_and_predict(X_train, y_train, X_test, model_type="regressor"):
             time_left_for_this_task=600,
             per_run_time_limit=60,
             n_jobs=-1,
-            tmp_folder="/tmp/autosklearn_classification_example_tmp",
+            tmp_folder="/tmp/autosklearn_classification_example_tmp"
         )
+    elif model_type == "catboost":
+        model = CatBoostRegressor()
+    elif model_type == 'xgboost':
+        model = XGBRegressor()
     else:
         raise ValueError(f"Invalid model_type: {model_type}. Expected 'regressor' or 'classifier'.")
 
@@ -88,6 +93,9 @@ def train_and_predict(X_train, y_train, X_test, model_type="regressor"):
     predictions = model.predict(X_test)
     try:
         print(model.show_models())
+        print(model.leaderboard())
+        # print("MSE:", mean_squared_error(y_test, predictions))
+        print(model.get_configuration_space(X_train, y_train))
     except:
         print("")
     return pd.DataFrame(predictions)
@@ -134,7 +142,7 @@ def main():
     pd.set_option('display.max_columns', 200)
     
     X_train, y_train, X_test = load_datasets()
-    predictions = train_and_predict(X_train, y_train, X_test,model_type="automl")
+    predictions = train_and_predict(X_train, y_train, X_test,model_type="xgboost")
     X_target = pd.read_parquet('data/A/train_targets.parquet')
     # rmse = validate(predicted_df=predictions, target_df=X_target)
     # print(f'RMSE: {rmse}')
