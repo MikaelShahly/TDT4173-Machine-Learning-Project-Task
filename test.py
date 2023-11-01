@@ -50,10 +50,29 @@ def one_hot_to_categorical(df, col1, col2):
     })
     return result_df
 
+X_test_A = None
+X_test_B = None
+X_test_C = None
+X_train_A = None
+X_train_B = None
+X_train_C = None
+y_train_A = None
+y_train_B = None
+y_train_C = None
+
 def load_datasets():
     X_test  = pd.read_parquet('data/prepared_datasets/only_y_cleaned/X_test.parquet')
+    X_test_A = X_test[X_test['location'] == 'A']
+    X_test_B = X_test[X_test['location'] == 'B']
+    X_test_C = X_test[X_test['location'] == 'C']
     X_train = pd.read_parquet('data/prepared_datasets/only_y_cleaned/X_train.parquet')
+    X_train_A = X_train[X_train['location'] == 'A']
+    X_train_B = X_train[X_train['location'] == 'B']
+    X_train_C = X_train[X_train['location'] == 'C']
     y_train = pd.read_parquet('data/prepared_datasets/only_y_cleaned/Y_train.parquet')
+    y_train_A = y_train[y_train['location'] == 'A']
+    y_train_B = y_train[y_train['location'] == 'B']
+    y_train_C = y_train[y_train['location'] == 'C']
     return X_train, y_train, X_test
 
 def train_and_predict(X_train, y_train, X_test, model_type="regressor"):
@@ -80,7 +99,12 @@ def train_and_predict(X_train, y_train, X_test, model_type="regressor"):
         )
     elif model_type == "catboost":
         cat_features = ['location']
-        model = CatBoostRegressor(
+        
+        model_A = CatBoostRegressor(
+            cat_features=cat_features,
+            verbose=100
+        )
+        model_A = CatBoostRegressor(
             cat_features=cat_features,
             verbose=100
         )
@@ -107,7 +131,9 @@ def prepare_submission(predictions, X_test):
     index_df = X_test.index.to_frame()
     out_pd = pd.concat([index_df.reset_index(drop=True), predictions.reset_index(drop=True)], axis=1)
     out_pd = out_pd.rename(columns={0: 'prediction', 'date_forecast': 'time'})
-    out_pd['location'] = one_hot_to_categorical(X_test, 'B', 'C')
+    print(X_test.info())
+    print(out_pd.info())
+    out_pd['location'] = X_test['location'].reset_index(drop=True)
     out_pd.set_index('time', inplace=True)
     return out_pd
 
