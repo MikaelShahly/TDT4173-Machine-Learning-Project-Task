@@ -4,6 +4,7 @@ from catboost import Pool, CatBoostRegressor
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import TimeSeriesSplit 
 import optuna 
+import json
 
 #Load inn datasets
 X_test  = pd.read_parquet('data/prepared_datasets/only_y_cleaned/X_test.parquet')
@@ -20,20 +21,19 @@ def objective(trial, X_train, y_train):
         "iterations": trial.suggest_int("iterations", 1000, 2500),
         "learning_rate": trial.suggest_float("learning_rate", 1e-3, 0.1, log=True),
         "depth": trial.suggest_int("depth", 1, 13),
-        "subsample": trial.suggest_float("subsample", 0.05, 1.0),
         "colsample_bylevel": trial.suggest_float("colsample_bylevel", 0.05, 1.0),
         "min_data_in_leaf": trial.suggest_int("min_data_in_leaf", 1, 100),
         "cat_features": ["location"]
     }
 
     model = CatBoostRegressor(**params, verbose=100)
-    ts = TimeSeriesSplit(n_splits = 8)
+    ts = TimeSeriesSplit(n_splits = 10)
     scores = cross_val_score(model, X_train, y_train, cv=ts, scoring='neg_mean_absolute_error')
 
     return np.min([np.mean(scores), np.median([scores])])
     
 study = optuna.create_study(direction='maximize')
-study.optimize(lambda trial: objective(trial, X_train, y_train), n_trials=10)
+study.optimize(lambda trial: objective(trial, X_train, y_train), n_trials=1)
 
 
 #to output the best paramaters
@@ -44,7 +44,7 @@ print(study.best_value)
 
 with open("optuna-best-parameters.txt", "w") as file:
     file.write("Best paramaters: \n")
-    file.write(study.best_params)  # Write the first string followed by a newline character
+    file.write(json.dumps(study.best_params))  # Write the first string followed by a newline character
     file.write("\n")
     file.write("best score MAE: \n")
-    file.write(study.best_value)  # Write the second string followed by a newline character
+    file.write(json.dumps(study.best_value))  # Write the second string followed by a newline character

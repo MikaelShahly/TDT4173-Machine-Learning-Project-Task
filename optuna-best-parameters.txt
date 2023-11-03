@@ -1,0 +1,3 @@
+Best paramaters: 
+{"iterations": 1937, "learning_rate": 0.046547445920550774, "depth": 6, "colsample_bylevel": 0.833583483136733, "min_data_in_leaf": 30}
+best score MAE: 
