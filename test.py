@@ -102,10 +102,6 @@ def train_and_predict(X_train, y_train, X_test, model_type="regressor"):
             verbose=100
         )
         
-        model_C = CatBoostRegressor(
-            cat_features=cat_features,
-            verbose=100
-        )
     elif model_type == 'xgboost':
         model = XGBRegressor()
     else:
@@ -124,14 +120,11 @@ def train_and_predict(X_train, y_train, X_test, model_type="regressor"):
     ts = TimeSeriesSplit(n_splits = 10)
     cross_val_score(model, X_train_A, y_train_A, cv=ts, scoring='neg_mean_absolute_error')
     
-    model_B.fit(X_train_B, y_train_B)
-    predictions2 = model_B.predict(X_test_B)
+    model_B.fit(pd.concat([X_train_B,X_train_C], axis=0), pd.concat([y_train_B, y_train_C],axis=0))
+    predictions2 = model_B.predict(pd.concat([X_test_B, X_test_C],axis=0))
         
-    model_C.fit(X_train_C, y_train_C)
-    predictions3 = model_C.predict(X_test_C)
-        
-    predictions = np.concatenate([predictions1, predictions2, predictions3])
-        
+    predictions = np.concatenate([predictions1, predictions2])
+    
     try:
         print(model.show_models())
         print(model.leaderboard())
