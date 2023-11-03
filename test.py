@@ -8,6 +8,8 @@ from sklearn.metrics import mean_squared_error
 import autosklearn.regression
 from catboost import Pool, CatBoostRegressor
 from xgboost import XGBRegressor
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import TimeSeriesSplit 
 
 def execute_cmd(command):
     """
@@ -50,18 +52,9 @@ def one_hot_to_categorical(df, col1, col2):
     })
     return result_df
 
-X_test_A = None
-X_test_B = None
-X_test_C = None
-X_train_A = None
-X_train_B = None
-X_train_C = None
-y_train_A = None
-y_train_B = None
-y_train_C = None
-
 def load_datasets():
     X_test  = pd.read_parquet('data/prepared_datasets/only_y_cleaned/X_test.parquet')
+    global X_test_A, X_test_B, X_test_C, X_train_A, X_train_B, X_train_C, y_train_A, y_train_B, y_train_C
     X_test_A = X_test[X_test['location'] == 'A']
     X_test_B = X_test[X_test['location'] == 'B']
     X_test_C = X_test[X_test['location'] == 'C']
@@ -69,10 +62,10 @@ def load_datasets():
     X_train_A = X_train[X_train['location'] == 'A']
     X_train_B = X_train[X_train['location'] == 'B']
     X_train_C = X_train[X_train['location'] == 'C']
-    y_train = pd.read_parquet('data/prepared_datasets/only_y_cleaned/Y_train.parquet')
-    y_train_A = y_train[y_train['location'] == 'A']
-    y_train_B = y_train[y_train['location'] == 'B']
-    y_train_C = y_train[y_train['location'] == 'C']
+    y_train = None #pd.read_parquet('data/prepared_datasets/only_y_cleaned/Y_train.parquet')
+    y_train_A = pd.read_parquet('data/prepared_datasets/only_y_cleaned/Y_train_a.parquet')
+    y_train_B = pd.read_parquet('data/prepared_datasets/only_y_cleaned/Y_train_b.parquet')
+    y_train_C = pd.read_parquet('data/prepared_datasets/only_y_cleaned/Y_train_c.parquet')
     return X_train, y_train, X_test
 
 def train_and_predict(X_train, y_train, X_test, model_type="regressor"):
@@ -100,11 +93,16 @@ def train_and_predict(X_train, y_train, X_test, model_type="regressor"):
     elif model_type == "catboost":
         cat_features = ['location']
         
-        model_A = CatBoostRegressor(
+        model = CatBoostRegressor(
             cat_features=cat_features,
             verbose=100
         )
-        model_A = CatBoostRegressor(
+        model_B = CatBoostRegressor(
+            cat_features=cat_features,
+            verbose=100
+        )
+        
+        model_C = CatBoostRegressor(
             cat_features=cat_features,
             verbose=100
         )
@@ -113,12 +111,27 @@ def train_and_predict(X_train, y_train, X_test, model_type="regressor"):
     else:
         raise ValueError(f"Invalid model_type: {model_type}. Expected 'regressor' or 'classifier'.")
 
-    scores = cross_val_score(model, X_train, y_train, cv=5)
-    print("Cross-validation scores:", scores)
-    print("Average cross-validation score:", scores.mean())
+    # scores = cross_val_score(model, X_train, y_train, cv=5)
+    # print("Cross-validation scores:", scores)
+    # print("Average cross-validation score:", scores.mean())
     
-    model.fit(X_train, y_train)
-    predictions = model.predict(X_test)
+    # model.fit(X_train, y_train)
+    # predictions = model.predict(X_test)
+    
+    model.fit(X_train_A, y_train_A)
+    predictions1 = model.predict(X_test_A)
+    
+    ts = TimeSeriesSplit(n_splits = 10)
+    cross_val_score(model, X_train_A, y_train_A, cv=ts, scoring='neg_mean_absolute_error')
+    
+    model_B.fit(X_train_B, y_train_B)
+    predictions2 = model_B.predict(X_test_B)
+        
+    model_C.fit(X_train_C, y_train_C)
+    predictions3 = model_C.predict(X_test_C)
+        
+    predictions = np.concatenate([predictions1, predictions2, predictions3])
+        
     try:
         print(model.show_models())
         print(model.leaderboard())
