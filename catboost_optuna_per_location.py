@@ -86,7 +86,7 @@ def objective(trial, X_train, y_train):
 
     return np.mean([MAE_a, MAE_b, MAE_c])
     
-study = optuna.create_study(direction='maximize')
+study = optuna.create_study(direction='minimize')
 study.optimize(lambda trial: objective(trial, X_train, y_train), n_trials=30)
 
 
