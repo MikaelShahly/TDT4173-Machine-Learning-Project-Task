@@ -18,7 +18,7 @@ cat_feature = ["location"]
 #
 def objective(trial, X_train, y_train):
     params = {
-        "iterations": trial.suggest_int("iterations", 1000, 2500),
+        "iterations": trial.suggest_int("iterations", 300, 2500),
         "learning_rate": trial.suggest_float("learning_rate", 1e-3, 0.1, log=True),
         "depth": trial.suggest_int("depth", 1, 13),
         "colsample_bylevel": trial.suggest_float("colsample_bylevel", 0.05, 1.0),
@@ -27,13 +27,13 @@ def objective(trial, X_train, y_train):
     }
 
     model = CatBoostRegressor(**params, verbose=100)
-    ts = TimeSeriesSplit(n_splits = 10)
+    ts = TimeSeriesSplit(n_splits = 4)
     scores = cross_val_score(model, X_train, y_train, cv=ts, scoring='neg_mean_absolute_error')
 
     return np.min([np.mean(scores), np.median([scores])])
     
 study = optuna.create_study(direction='maximize')
-study.optimize(lambda trial: objective(trial, X_train, y_train), n_trials=1)
+study.optimize(lambda trial: objective(trial, X_train, y_train), n_trials=10)
 
 
 #to output the best paramaters
