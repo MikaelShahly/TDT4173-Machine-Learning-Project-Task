@@ -5,11 +5,16 @@ from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import TimeSeriesSplit 
 import optuna 
 import json
+from sklearn.metrics import mean_absolute_error
 
 #Load inn datasets
 X_test  = pd.read_parquet('data/prepared_datasets/only_y_cleaned/X_test.parquet')
 X_train = pd.read_parquet('data/prepared_datasets/only_y_cleaned/X_train.parquet')
 y_train = pd.read_parquet('data/prepared_datasets/only_y_cleaned/Y_train.parquet')
+y_train_a = pd.read_parquet('data/prepared_datasets/only_y_cleaned/Y_train_a.parquet')
+y_train_b = pd.read_parquet('data/prepared_datasets/only_y_cleaned/Y_train_b.parquet')
+y_train_c = pd.read_parquet('data/prepared_datasets/only_y_cleaned/Y_train_c.parquet')
+
 
 #Make a training pool
 train_pool = Pool(X_train, y_train, cat_features=["location"])
@@ -18,11 +23,13 @@ cat_feature = ["location"]
 #
 def objective(trial, X_train, y_train):
     params = {
-        "iterations": trial.suggest_int("iterations", 300, 2500),
+        "iterations": trial.suggest_int("iterations", 300, 3000),
         "learning_rate": trial.suggest_float("learning_rate", 1e-3, 0.1, log=True),
         "depth": trial.suggest_int("depth", 1, 13),
         "colsample_bylevel": trial.suggest_float("colsample_bylevel", 0.05, 1.0),
         "min_data_in_leaf": trial.suggest_int("min_data_in_leaf", 1, 100),
+        "l2_leaf_reg": trial.suggest_int("l2_leaf_reg", 2, 10),
+        "has-time": trial.suggest_categorical('has-time', [True, False]),
         "cat_features": ["location"]
     }
 
@@ -33,7 +40,7 @@ def objective(trial, X_train, y_train):
     return np.min([np.mean(scores), np.median([scores])])
     
 study = optuna.create_study(direction='maximize')
-study.optimize(lambda trial: objective(trial, X_train, y_train), n_trials=10)
+study.optimize(lambda trial: objective(trial, X_train, y_train), n_trials=30)
 
 
 #to output the best paramaters
@@ -48,3 +55,6 @@ with open("optuna-best-parameters.txt", "w") as file:
     file.write("\n")
     file.write("best score MAE: \n")
     file.write(json.dumps(study.best_value))  # Write the second string followed by a newline character
+
+
+
