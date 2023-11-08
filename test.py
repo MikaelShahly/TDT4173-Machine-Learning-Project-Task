@@ -86,10 +86,10 @@ def train_and_predict(X_train, y_train, X_test, model_type="regressor"):
     
     model.fit(X_train, y_train)
     predictions = model.predict(X_test)
-    try:
-        print(model.show_models())
-    except:
-        print("")
+    print(model.show_models())
+    print(model.leaderboard())
+    print(model.get_configuration_space(X_train, y_train))
+
     return pd.DataFrame(predictions)
 
 def prepare_submission(predictions, X_test):
