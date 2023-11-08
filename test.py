@@ -111,26 +111,12 @@ def train_and_predict(X_train, y_train, X_test, model_type="regressor"):
     # print("Cross-validation scores:", scores)
     # print("Average cross-validation score:", scores.mean())
     
-    # model.fit(X_train, y_train)
-    # predictions = model.predict(X_test)
-    
-    model.fit(X_train_A, y_train_A)
-    predictions1 = model.predict(X_test_A)
-    
-    ts = TimeSeriesSplit(n_splits = 10)
-    cross_val_score(model, X_train_A, y_train_A, cv=ts, scoring='neg_mean_absolute_error')
-    
-    model_B.fit(pd.concat([X_train_B,X_train_C], axis=0), pd.concat([y_train_B, y_train_C],axis=0))
-    predictions2 = model_B.predict(pd.concat([X_test_B, X_test_C],axis=0))
-        
-    predictions = np.concatenate([predictions1, predictions2])
-    
-    try:
-        print(model.show_models())
-        print(model.leaderboard())
-        print(model.get_configuration_space(X_train, y_train))
-    except:
-        print("")
+    model.fit(X_train, y_train)
+    predictions = model.predict(X_test)
+    print(model.show_models())
+    print(model.leaderboard())
+    print(model.get_configuration_space(X_train, y_train))
+
     return pd.DataFrame(predictions)
 
 def prepare_submission(predictions, X_test):
