@@ -53,19 +53,9 @@ def one_hot_to_categorical(df, col1, col2):
     return result_df
 
 def load_datasets():
-    X_test  = pd.read_parquet('data/prepared_datasets/only_y_cleaned/X_test.parquet')
-    global X_test_A, X_test_B, X_test_C, X_train_A, X_train_B, X_train_C, y_train_A, y_train_B, y_train_C
-    X_test_A = X_test[X_test['location'] == 'A']
-    X_test_B = X_test[X_test['location'] == 'B']
-    X_test_C = X_test[X_test['location'] == 'C']
-    X_train = pd.read_parquet('data/prepared_datasets/only_y_cleaned/X_train.parquet')
-    X_train_A = X_train[X_train['location'] == 'A']
-    X_train_B = X_train[X_train['location'] == 'B']
-    X_train_C = X_train[X_train['location'] == 'C']
-    y_train = None #pd.read_parquet('data/prepared_datasets/only_y_cleaned/Y_train.parquet')
-    y_train_A = pd.read_parquet('data/prepared_datasets/only_y_cleaned/Y_train_a.parquet')
-    y_train_B = pd.read_parquet('data/prepared_datasets/only_y_cleaned/Y_train_b.parquet')
-    y_train_C = pd.read_parquet('data/prepared_datasets/only_y_cleaned/Y_train_c.parquet')
+    X_test  = pd.read_parquet('data/prepared_datasets/no_Nan_hotone_encoding/X_test.parquet')
+    X_train = pd.read_parquet('data/prepared_datasets/no_Nan_hotone_encoding/X_train.parquet')
+    y_train = pd.read_parquet('data/prepared_datasets/no_Nan_hotone_encoding/Y_train.parquet')
     return X_train, y_train, X_test
 
 def train_and_predict(X_train, y_train, X_test, model_type="regressor"):
@@ -87,29 +77,19 @@ def train_and_predict(X_train, y_train, X_test, model_type="regressor"):
         model = autosklearn.regression.AutoSklearnRegressor(
             time_left_for_this_task=600,
             per_run_time_limit=60,
-            n_jobs=-1,
+            # n_jobs=20,
             tmp_folder="/tmp/autosklearn_classification_example_tmp"
         )
     elif model_type == "catboost":
         cat_features = ['location']
-        
         model = CatBoostRegressor(
             cat_features=cat_features,
             verbose=100
         )
-        model_B = CatBoostRegressor(
-            cat_features=cat_features,
-            verbose=100
-        )
-        
     elif model_type == 'xgboost':
         model = XGBRegressor()
     else:
         raise ValueError(f"Invalid model_type: {model_type}. Expected 'regressor' or 'classifier'.")
-
-    # scores = cross_val_score(model, X_train, y_train, cv=5)
-    # print("Cross-validation scores:", scores)
-    # print("Average cross-validation score:", scores.mean())
     
     model.fit(X_train, y_train)
     predictions = model.predict(X_test)
@@ -141,9 +121,7 @@ def merge_with_sample(out_pd):
     merged_df.rename(columns={'prediction_new': 'prediction'}, inplace=True)
     return sample_submission[['id']].merge(merged_df[['id', 'prediction']], on='id', how='left')
 
-def validate(predicted_df, target_df):
-    train_targets = pd.read_parquet('data/A/train_targets.parquet')
-    
+def validate(predicted_df, target_df):   
     # Check if the number of samples in df and train_targets are the same
     if len(predicted_df) != len(target_df):
         raise ValueError(f"Validate: Inconsistent number of samples: predicted_df has {len(predicted_df)} samples while target_df has {len(target_df)} samples.")
@@ -163,7 +141,7 @@ def main():
     pd.set_option('display.max_columns', 200)
     
     X_train, y_train, X_test = load_datasets()
-    predictions = train_and_predict(X_train, y_train, X_test,model_type="catboost")
+    predictions = train_and_predict(X_train, y_train, X_test,model_type="automl")
     X_target = pd.read_parquet('data/A/train_targets.parquet')
     # rmse = validate(predicted_df=predictions, target_df=X_target)
     # print(f'RMSE: {rmse}')
