@@ -1,4 +1,0 @@
-Best paramaters: 
-{"iterations": 1852, "learning_rate": 0.0018854412552105353, "depth": 9, "colsample_bylevel": 0.7366562974962199, "min_data_in_leaf": 4, "l2_leaf_reg": 3, "has-time": true, "bagging_temperature": 0.9525931510378696, "random_strength": 0.30613129187014626, "border_count": 993, "rsm": 0.21119141087462187, "nan_mode": "min"}
-best score MAE: 
-351.34628571238125
